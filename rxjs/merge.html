@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="Rx.js"></script>
+    <title>Document</title>
+</head>
+<body>
+<script>
+let Observable = Rx.Observable;
+let Subject = Rx.Subject;
+let timer = Observable.timer;
+let merge = Observable.merge;
+
+const first = timer(2500);
+// 每2秒发出值
+const second = timer(2000);
+// 每1.5秒发出值
+const third = timer(1500);
+// 每1秒发出值
+const fourth = timer(1000);
+
+// 从一个 observable 中发出输出值
+const example = Rx.Observable.merge(
+  first.mapTo('FIRST!'),
+  second.mapTo('SECOND!'),
+  third.mapTo('THIRD'),
+  fourth.mapTo('FOURTH')
+).do(v => {
+    console.log(`do ${v}`);
+});
+// 输出: "FOURTH", "THIRD", "SECOND!", "FIRST"
+const subscribe = example.subscribe(val => console.log(val));
+</script>
+</body>
+</html>

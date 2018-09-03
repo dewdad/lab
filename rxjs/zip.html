@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="Rx.js"></script>
+    <title>Document</title>
+</head>
+<body>
+<script>
+let Observable = Rx.Observable;
+let Subject = Rx.Subject;
+let timer = Observable.timer;
+let interval = Observable.interval;
+let merge = Observable.merge;
+let mergeAll = Observable.mergeAll;
+let zip = Observable.zip;
+
+const source = interval(1000);
+// 当一个 observable 完成时，便不会再发出更多的值了
+const example = zip(source, source.take(2));
+// 输出: [0,0]...[1,1]
+const subscribe = example.subscribe(val => console.log(val));
+</script>
+</body>
+</html>

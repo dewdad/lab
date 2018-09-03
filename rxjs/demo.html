@@ -12,8 +12,17 @@
 let Observable = Rx.Observable;
 let Subject = Rx.Subject;
 let timer = Observable.timer;
+let interval = Observable.interval;
+let merge = Observable.merge;
+let mergeAll = Observable.mergeAll;
+let zip = Observable.zip;
+let combineLatest = Observable.combineLatest;
 
-
+const source = interval(1000);
+// 当一个 observable 完成时，便不会再发出更多的值了
+const example = zip(source, source.take(2));
+// 输出: [0,0]...[1,1]
+const subscribe = example.subscribe(val => console.log(val));
 </script>
 </body>
 </html>
