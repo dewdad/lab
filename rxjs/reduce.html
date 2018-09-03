@@ -13,7 +13,15 @@ let Observable = Rx.Observable;
 let Subject = Rx.Subject;
 let timer = Observable.timer;
 
-
+let ob$ = timer(1000, 1000).startWith(0).reduce((prev, curr) => {
+    console.log(prev, curr);
+    return prev + curr;
+}).do((v) => {
+    // console.log(`do ${v}`);
+});
+ob$.subscribe((v) => {
+    // console.log('ob1 ', v);
+});
 </script>
 </body>
 </html>
