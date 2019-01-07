@@ -14,18 +14,20 @@ let Subject = Rx.Subject;
 let timer = Observable.timer;
 let interval = Observable.interval;
 let merge = Observable.merge;
-let mergeAll = Observable.mergeAll;
-let zip = Observable.zip;
-let combineLatest = Observable.combineLatest;
+let of = Observable.of;
+let from = Observable.from;
 
-const source = interval(1000).take(5);
-// 当一个 observable 完成时，便不会再发出更多的值了
-const example = source.map(val => {
-    return interval(1000).map(i => `Result (${val}): ${i}`).take(5);
+const p = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve('test');
+  }, 1000);
 });
-const combined = example.combineAll().take(1);
-// 输出: [0,0]...[1,1]
-const subscribe = combined.subscribe(val => console.log(val));
+const o = Observable.from(p).takeUntil(timer(5000));
+o.subscribe({
+  next: res => {console.log(res, 'next')},
+  error: () => {console.log('error')},
+  complete: () => {console.log('complete')}
+});
 </script>
 </body>
 </html>
