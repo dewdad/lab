@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>p2</title>
+</head>
+<body>
+<script>
+  var myWorker = new SharedWorker("worker.js");
+
+  setTimeout(() => {
+    myWorker.port.postMessage([2]);
+  }, 1000);
+
+  myWorker.port.onmessage = function(e) {
+    console.log('Message received from worker', e.data);
+  }
+</script>
+</body>
+</html>

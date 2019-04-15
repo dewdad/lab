@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+ *  Copyright (c) 2015 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+-->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Peer connection</title>
+    <link rel="stylesheet" href="../main.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+
+<body>
+    <video style="transform: rotateY(180deg);" id="localVideo" playsinline autoplay muted></video>
+    <video style="transform: rotateY(180deg);" id="remoteVideo" playsinline autoplay></video>
+
+    <div class="box">
+        <button id="callButton">Call</button>
+        <button id="hangupButton">Hang Up</button>
+    </div>
+
+</div>
+
+<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+<script src="js/main.js" async></script>
+</body>
+</html>
