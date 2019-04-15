@@ -4,18 +4,20 @@ const hangupButton = document.getElementById('hangupButton');
 callButton.addEventListener('click', call);
 hangupButton.addEventListener('click', hangup);
 
-let pc;
-let peerStream;
+var pc;
+let localStream;
 let defer;
 let sdpOption = {
     offerToReceiveAudio: true,
     offerToReceiveVideo: true
 };
+let count = 0;
 const video = document.getElementById('video');
 const configuration = {};
 
+localStorage.clear();
 window.addEventListener('storage', message => {
-    console.log('localStorage:', message.key, message.newValue);
+    // console.log('localStorage:', message.key, message.newValue);
     switch (message.key) {
         case 'offer':
             onReciveOffer(message.newValue);
@@ -28,10 +30,29 @@ window.addEventListener('storage', message => {
             break;
         case 'iceAnswer':
             onReciveIceAnswer(message.newValue);
+            break;
+        case 'hangup':
+            hangup();
     }
 });
 
 function getUserMedia() {
+    pc.addEventListener('iceconnectionstatechange', () => {
+        console.log('iceconnectionstatechange', pc.iceConnectionState);
+    });
+
+    pc.addEventListener('icegatheringstatechange', () => {
+        console.log('icegatheringstatechange', pc.iceGatheringState);
+    });
+
+    pc.addEventListener('connectionstatechange', () => {
+        console.log('connectionstatechange', pc.connectionState);
+    });
+
+    pc.addEventListener('signalingstatechange', () => {
+        console.log('signalingstatechange', pc.connectionState);
+    });
+
     return navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
@@ -60,13 +81,13 @@ function call() {
     pc = new RTCPeerConnection(configuration);
     pc.addEventListener('icecandidate', e => onIceCandidate(e, 'iceOffer'));
     pc.addEventListener('addstream', e => {
-        peerStream = e.stream;
         video.srcObject = e.stream;
     });
     // pc.addEventListener('track', e => {
     //     video.srcObject = e.streams[0];
     // });
     getUserMedia().then(stream => {
+        localStream = stream;
         pc.addStream(stream);
         // stream.getTracks().forEach(track => pc.addTrack(track, stream));
         createOffer();
@@ -84,17 +105,14 @@ function answer(offer) {
     pc = new RTCPeerConnection(configuration);
     pc.addEventListener('icecandidate', e => onIceCandidate(e, 'iceAnswer'));
     pc.addEventListener('addstream', e => {
-        peerStream = e.stream;
         video.srcObject = e.stream;
-    });
-    pc.addEventListener('removestream', () => {
-        video.srcObject = null;
     });
     // pc.addEventListener('track', e => {
     //     video.srcObject = e.streams[0];
     // });
 
     defer = getUserMedia().then(stream => {
+        localStream = stream;
         pc.addStream(stream);
         // stream.getTracks().forEach(track => pc.addTrack(track, stream));
         return pc.setRemoteDescription(offer).then(() => {
@@ -111,8 +129,10 @@ function onIceCandidate(e, type) {
 }
 
 function hangup() {
-  pc.removeStream(peerStream);
-  peerStream && peerStream.getTracks().forEach(track => track.stop());
-  pc.close();
-  pc = null;
+    localStorage.setItem('hangup', ++count);
+    localStream && localStream.getTracks().forEach(track => {
+        track.stop();
+    });
+    pc.close();
+    // pc = null;
 }
