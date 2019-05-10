@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Webaudio</title>
+    <style type="text/css">
+    .player{position: relative; width: 360px; height: 90px;}
+    .player .progress{position: absolute; left: 0; top: 0; width: 0; overflow: hidden;}
+    #pinner{height: 10px; float: left; background: #090;}
+    </style>
+</head>
+<body>
+<input type="file" id="audio" value="" accept="audio/mp3" placeholder="打开音频文件" /><br />
+<button id="ctrl">play/pause</button><br />
+<div class="player">
+    <canvas width="360" height="90" id="player"></canvas>
+    <div class="progress"><canvas width="360" height="90" id="progress"></canvas></div>
+</div>
+<script>
+let $progress = document.querySelector('.progress');
+let ctx = new AudioContext();
+let gain = ctx.createGain();
+let visual;
+gain.connect(ctx.destination);
+
+document.querySelector('#audio').addEventListener('change', e => {
+    let file = e.target.files[0];
+    let reader = new FileReader();
+    reader.readAsArrayBuffer(file);
+    reader.onload = data => {
+        let result = data.target.result;
+        ctx.decodeAudioData(result).then(buffer => {
+            visual = new AudioVisualizer(buffer);
+            console.log('audio loaded', buffer);
+        });
+    };
+})
+
+document.querySelector('#ctrl').onclick = () => {
+    visual && visual.togglePlayback();
+}
+
+function AudioVisualizer(buffer) {
+    this.startOffset = 0;
+    this.buffer = buffer;
+    this.drawBuffer();
+}
+
+AudioVisualizer.prototype.togglePlayback = function() {
+    if (this.isPlaying) {
+        this.source[this.source.stop ? 'stop': 'noteOff'](0);
+        this.raf && cancelAnimationFrame(this.raf);
+        this.startOffset += ctx.currentTime - this.startTime;
+    } else {
+        this.startTime = ctx.currentTime;
+        this.source = ctx.createBufferSource();
+        this.source.connect(gain);
+        this.source.buffer = this.buffer;
+        this.source.loop = true;
+        this.source[this.source.start ? 'start' : 'noteOn'](0, this.startOffset % this.buffer.duration);
+        this.raf = requestAnimationFrame(this.progress.bind(this));
+    }
+    this.isPlaying = !this.isPlaying;
+}
+
+AudioVisualizer.prototype.progress = function() {
+    let progress = (ctx.currentTime - this.startTime + this.startOffset % this.buffer.duration) / this.buffer.duration
+    $progress.style.width = progress * 100 + '%';
+    if (this.isPlaying) {
+        this.raf = requestAnimationFrame(this.progress.bind(this));
+    }
+}
+
+AudioVisualizer.prototype.drawBuffer = function() {
+    let peaks = this.getPeaks();
+    let canvas = document.querySelector('#player');
+    let ctx = window.cx = canvas.getContext('2d');
+    let canvasProgress = document.querySelector('#progress');
+    let ctxProgress = canvasProgress.getContext('2d');
+    let len = peaks.length;
+    ctx.fillStyle = '#999';
+    ctxProgress.fillStyle = '#333';
+    for (let i = 0; i < peaks.length; ++i) {
+        let height = Math.round(peaks[i] * 45 / 1);
+        let y = 45 - height;
+        // console.log(i, y, 1, height * 2);
+        // let hue = i / len * 120;
+        // ctxProgress.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
+        ctxProgress.fillRect(i, y, 1, height * 2);
+        ctx.fillRect(i, y, 1, height * 2);
+    }
+}
+
+AudioVisualizer.prototype.getPeaks = function(length, first, last) {
+    if (!this.buffer) {
+        return [];
+    }
+
+    length = length || 360;
+    first = first || 0;
+    last = last || length - 1;
+
+    const sampleSize = this.buffer.length / length;
+    const sampleStep = ~~(sampleSize / 10) || 1;
+    const channels = this.buffer.numberOfChannels;
+    let mergedPeaks = [];
+    let c;
+
+    for (c = 0; c < channels; c++) {
+        const peaks = [];
+        const chan = this.buffer.getChannelData(c);
+        let i;
+
+        for (i = first; i <= last; i++) {
+            const start = ~~(i * sampleSize);
+            const end = ~~(start + sampleSize);
+            // let min = 0;
+            let max = 0;
+            let j;
+
+            for (j = start; j < end; j += sampleStep) {
+                const value = chan[j];
+
+                if (value > max) {
+                    max = value;
+                }
+
+                // if (value < min) {
+                //     min = value;
+                // }
+            }
+
+            peaks[i] = max;
+            // peaks[2 * i] = max;
+            // peaks[2 * i + 1] = min;
+
+            if (c == 0 || max > mergedPeaks[i]) {
+                mergedPeaks[i] = max;
+            }
+
+            // if (c == 0 || min < mergedPeaks[2 * i + 1]) {
+            //     mergedPeaks[2 * i + 1] = min;
+            // }
+        }
+    }
+
+    return mergedPeaks;
+}
+</script>
+</body>
+</html>

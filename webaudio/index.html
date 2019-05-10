@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Webaudio</title>
+    <style type="text/css">
+    .progress{height:10px; margin-top: 15px; background: #eee;}
+    #pinner{height: 10px; float: left; background: #090;}
+    </style>
+</head>
+<body>
+<input type="file" id="audio" value="" accept="audio/mp3" placeholder="打开音频文件" /><br />
+<button id="increase">+音量</button><br />
+<button id="decrease">-音量</button><br />
+<button id="fast">快进</button><br />
+<button id="slow">减速</button><br />
+<button id="ahead">前进10s</button><br />
+<button id="play">play</button>
+<button id="pause">pause</button>
+<button id="stop">stop</button>
+<div class="progress"><div id="pinner"></div></div>
+<script>
+let ctx = new AudioContext();
+let gain = ctx.createGain();
+let playedTime = 0;
+let playbackRate = 1;
+let startTime;
+let source; // buffer
+let bf; // buffer source node
+let af; // raf
+
+let $progress = document.querySelector('#pinner');
+document.querySelector('.progress').onclick = e => {
+    let dot = e.offsetX;
+    let percent = dot / e.currentTarget.offsetWidth;
+    bf.stop();
+    createBufferSource();
+    playedTime = percent * source.duration;
+    startTime = ctx.currentTime;
+    bf.start(0, playedTime, source.duration - playedTime);
+    progress();
+}
+
+gain.gain.value = .5;
+gain.connect(ctx.destination);
+
+function progress() {
+    af = requestAnimationFrame(progress);
+    let time = (ctx.currentTime - startTime) * playbackRate + playedTime;
+    let percent = time * 100 / source.duration;
+    $progress.style.width = percent + '%';
+}
+
+function createBufferSource() {
+    cancelAnimationFrame(af);
+    bf && bf.disconnect();
+    bf = ctx.createBufferSource();
+    bf.connect(gain);
+    bf.buffer = source;
+    bf.playbackRate.value = playbackRate;
+
+    bf.onended = () => {
+        cancelAnimationFrame(af);
+        // console.log('ended');
+    }
+}
+
+document.querySelector('#play').onclick = () => {
+    createBufferSource();
+    startTime = ctx.currentTime;
+    bf.start(0, playedTime, source.duration - playedTime);
+    progress();
+}
+
+document.querySelector('#pause').onclick = () => {
+    cancelAnimationFrame(af);
+    playedTime += (ctx.currentTime - startTime) * playbackRate;
+    bf.stop();
+}
+
+document.querySelector('#stop').onclick = () => {
+    playedTime = 0;
+    cancelAnimationFrame(af);
+    bf.stop();
+    $progress.style.width = 0;
+}
+
+document.querySelector('#fast').onclick = () => {
+    playbackRate = bf.playbackRate.value += .1;
+}
+
+document.querySelector('#slow').onclick = () => {
+    playbackRate = bf.playbackRate.value = Math.max(bf.playbackRate.value - .1, 0);
+}
+
+document.querySelector('#ahead').onclick = () => {
+    bf.stop();
+    createBufferSource();
+    playedTime += 10 * playbackRate;
+    startTime = ctx.currentTime;
+    bf.start(0, playedTime, source.duration - playedTime);
+    progress();
+}
+
+document.querySelector('#audio').onchange = (e) => {
+    let reader = new FileReader();
+
+    reader.readAsArrayBuffer(e.target.files[0]);
+    reader.onload = data => {
+        let buffer = data.target.result;
+        ctx.decodeAudioData(buffer).then(buffer => {
+            source = buffer;
+        });
+    }
+}
+
+document.querySelector('#increase').onclick = () => {
+    gain.gain.value += .1;
+    console.log(gain.gain.value);
+}
+
+document.querySelector('#decrease').onclick = () => {
+    gain.gain.value = Math.max(gain.gain.value - .1, 0);
+    console.log(gain.gain.value);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Webaudio</title>
+    <style type="text/css">
+    .progress{height:10px; margin-top: 15px; background: #eee;}
+    #pinner{height: 10px; float: left; background: #090;}
+    </style>
+</head>
+<body>
+<input type="file" id="audio" value="" accept="audio/mp3" placeholder="打开音频文件" /><br />
+<button id="ctrl">play/pause</button><br />
+<canvas id="timedomain"></canvas><br />
+<canvas id="frequence"></canvas>
+<script>
+let ctx = new AudioContext();
+let gain = ctx.createGain();
+let visual;
+gain.connect(ctx.destination);
+
+document.querySelector('#audio').addEventListener('change', e => {
+    let file = e.target.files[0];
+    let reader = new FileReader();
+    reader.readAsArrayBuffer(file);
+    reader.onload = data => {
+        let result = data.target.result;
+        ctx.decodeAudioData(result).then(buffer => {
+            visual = new AudioVisualizer(buffer);
+            console.log('audio loaded', buffer);
+        });
+    };
+})
+
+document.querySelector('#ctrl').onclick = () => {
+    visual && visual.togglePlayback();
+}
+
+let WIDTH = 320;
+let HEIGHT = 180;
+let SMOOTHING = 0.8;
+let FFT_SIZE = 2048;
+
+function AudioVisualizer(buffer) {
+  this.analyser = ctx.createAnalyser();
+
+  this.analyser.connect(gain);
+  this.analyser.minDecibels = -140;
+  this.analyser.maxDecibels = 0;
+
+  this.freqs = new Uint8Array(this.analyser.frequencyBinCount);
+  this.times = new Uint8Array(this.analyser.frequencyBinCount);
+  this.buffer = buffer;
+
+  this.isPlaying = false;
+  this.startTime = 0;
+  this.startOffset = 0;
+}
+
+AudioVisualizer.prototype.togglePlayback = function() {
+    if (this.isPlaying) {
+        this.source[this.source.stop ? 'stop': 'noteOff'](0);
+        this.startOffset += ctx.currentTime - this.startTime;
+    } else {
+        this.startTime = ctx.currentTime;
+        console.log('started at', this.startOffset);
+        this.source = ctx.createBufferSource();
+        this.source.connect(this.analyser);
+        this.source.buffer = this.buffer;
+        this.source.loop = true;
+        this.source[this.source.start ? 'start' : 'noteOn'](0, this.startOffset % this.buffer.duration);
+        requestAnimationFrame(this.draw.bind(this));
+    }
+    this.isPlaying = !this.isPlaying;
+}
+
+AudioVisualizer.prototype.draw = function() {
+    this.analyser.smoothingTimeConstant = SMOOTHING;
+    this.analyser.fftSize = FFT_SIZE;
+
+    this.analyser.getByteFrequencyData(this.freqs);
+    this.analyser.getByteTimeDomainData(this.times);
+
+    let width = Math.floor(1/this.freqs.length, 10);
+    let canvas = document.querySelectorAll('canvas');
+    let canvasFrequence = document.querySelector('#frequence');
+    let canvasTimedomain = document.querySelector('#timedomain');
+    let drawFrequenceCtx = canvasFrequence.getContext('2d');
+    let drawTimedomainCtx = canvasTimedomain.getContext('2d');
+    canvas.forEach(c => {
+        c.width = WIDTH;
+        c.height = HEIGHT;
+    });
+    
+    let x = 0;
+    let barWidth = WIDTH/this.analyser.frequencyBinCount;
+    for (let i = 0; i < this.analyser.frequencyBinCount; i++) {
+        let value = this.freqs[i];
+        let percent = value / 256;
+        let height = HEIGHT * percent;
+        let offset = HEIGHT - height - 1;
+        let hue = i/this.analyser.frequencyBinCount * 60;
+        x += barWidth;
+        drawFrequenceCtx.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
+        drawFrequenceCtx.fillRect(i * barWidth, offset, barWidth, height);
+    }
+
+    drawTimedomainCtx.beginPath();
+    drawTimedomainCtx.moveTo(0, HEIGHT * .5);
+    drawTimedomainCtx.strokeStyle = '#090';
+    for (let i = 0; i < this.analyser.frequencyBinCount; i++) {
+        let value = this.times[i];
+        let percent = value / 256;
+        let height = HEIGHT * percent;
+        let offset = HEIGHT - height - 1;
+        let barWidth = WIDTH/this.analyser.frequencyBinCount;
+        
+        drawTimedomainCtx.lineTo(i * barWidth, offset);
+    }
+    drawTimedomainCtx.stroke();
+
+    if (this.isPlaying) {
+        requestAnimationFrame(this.draw.bind(this));
+    }
+}
+</script>
+</body>
+</html>
