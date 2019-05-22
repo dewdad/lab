@@ -66,7 +66,7 @@ AudioVisualizer.prototype.togglePlayback = function() {
 }
 
 AudioVisualizer.prototype.progress = function() {
-    let progress = (ctx.currentTime - this.startTime + this.startOffset % this.buffer.duration) / this.buffer.duration
+    let progress = (ctx.currentTime - this.startTime + this.startOffset) % this.buffer.duration / this.buffer.duration
     $progress.style.width = progress * 100 + '%';
     if (this.isPlaying) {
         this.raf = requestAnimationFrame(this.progress.bind(this));
