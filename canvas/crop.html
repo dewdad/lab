@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>demo</title>
+</head>
+<body>
+<canvas id="canvas" width="300" height="227"></canvas>
+<script>
+var img = new Image();
+img.src = 'rhino.jpg';
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+img.onload = function() {
+    ctx.drawImage(img, 0, 0);
+    setTimeout(() => {
+      ctx.clearRect(0, 0, 300, 227);
+      ctx.drawImage(img, 40, 80, 100, 100, 0, 0, 300, 227);
+      console.log('cropped');
+    }, 1000);
+};
+</script>
+</body>
+</html>
